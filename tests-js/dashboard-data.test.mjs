@@ -5,12 +5,44 @@ import test from "node:test";
 const csv = readFileSync("docs/data/company_metrics_sample.csv", "utf8");
 
 function parseCsv(text) {
-  const lines = text.trim().split(/\r?\n/);
-  const headers = lines.shift().split(",");
-  return lines.map((line) => {
-    const cells = line.split(",");
-    return Object.fromEntries(headers.map((header, index) => [header, cells[index] ?? ""]));
-  });
+  const records = [];
+  let row = [];
+  let field = "";
+  let quoted = false;
+  for (let index = 0; index < text.length; index += 1) {
+    const char = text[index];
+    const next = text[index + 1];
+    if (quoted) {
+      if (char === '"' && next === '"') {
+        field += '"';
+        index += 1;
+      } else if (char === '"') {
+        quoted = false;
+      } else {
+        field += char;
+      }
+    } else if (char === '"') {
+      quoted = true;
+    } else if (char === ",") {
+      row.push(field);
+      field = "";
+    } else if (char === "\n") {
+      row.push(field);
+      records.push(row);
+      row = [];
+      field = "";
+    } else if (char !== "\r") {
+      field += char;
+    }
+  }
+  if (field.length || row.length) {
+    row.push(field);
+    records.push(row);
+  }
+  const headers = records.shift();
+  return records
+    .filter((record) => record.length === headers.length)
+    .map((record) => Object.fromEntries(headers.map((header, index) => [header, record[index] ?? ""])));
 }
 
 function number(value) {
