@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Company Analysis Dashboard</title>
+    <meta name="description" content="Explore annual revenue, profit, valuation, growth, cash flow, and SankeyArt references for public companies.">
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js" defer></script>
+    <script src="dashboard.js" defer></script>
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">Annual company fundamentals</p>
+        <h1>Company Analysis Dashboard</h1>
+        <p class="lede">Explore revenue, profit, valuation, growth, cash generation, and SEC audit context in one place.</p>
+      </div>
+      <div class="source-card">
+        <span class="label">Dataset</span>
+        <strong id="datasetName">Bundled sample CSV</strong>
+        <span id="datasetMeta">Loading...</span>
+      </div>
+    </header>
+
+    <main>
+      <section class="controls" aria-label="Dashboard controls">
+        <label class="control">
+          <span>Search</span>
+          <input id="searchInput" type="search" placeholder="Ticker or company name" autocomplete="off">
+        </label>
+        <label class="control">
+          <span>Sort by</span>
+          <select id="sortSelect">
+            <option value="revenue">Revenue</option>
+            <option value="profit">Profit</option>
+            <option value="net_profit_margin_pct">Net margin</option>
+            <option value="annual_pe_ratio">Annual P/E</option>
+            <option value="ttm_pe_ratio">TTM P/E</option>
+            <option value="revenue_growth_pct">Revenue growth</option>
+            <option value="profit_growth_pct">Profit growth</option>
+            <option value="free_cash_flow_yield_pct">FCF yield</option>
+            <option value="ev_to_ebitda">EV/EBITDA</option>
+          </select>
+        </label>
+        <label class="control">
+          <span>Direction</span>
+          <select id="directionSelect">
+            <option value="desc">High to low</option>
+            <option value="asc">Low to high</option>
+          </select>
+        </label>
+        <label class="control">
+          <span>Minimum revenue</span>
+          <select id="revenueFilter">
+            <option value="0">All</option>
+            <option value="50000000000">$50B+</option>
+            <option value="100000000000">$100B+</option>
+            <option value="250000000000">$250B+</option>
+          </select>
+        </label>
+        <label class="file-control">
+          <span>Load another CSV</span>
+          <input id="csvInput" type="file" accept=".csv,text/csv">
+        </label>
+      </section>
+
+      <section class="summary-grid" aria-label="Dataset summary">
+        <article>
+          <span class="label">Companies</span>
+          <strong id="companyCount">0</strong>
+        </article>
+        <article>
+          <span class="label">Total revenue</span>
+          <strong id="totalRevenue">$0</strong>
+        </article>
+        <article>
+          <span class="label">Total profit</span>
+          <strong id="totalProfit">$0</strong>
+        </article>
+        <article>
+          <span class="label">Median annual P/E</span>
+          <strong id="medianPe">Not available</strong>
+        </article>
+      </section>
+
+      <section class="visual-grid" aria-label="Charts">
+        <article class="chart-panel">
+          <div class="panel-heading">
+            <h2>Revenue Ranking</h2>
+            <p>Top companies by latest annual SEC revenue.</p>
+          </div>
+          <canvas id="revenueChart" height="220"></canvas>
+        </article>
+        <article class="chart-panel">
+          <div class="panel-heading">
+            <h2>Margin vs P/E</h2>
+            <p>Profitability and valuation on the same map.</p>
+          </div>
+          <canvas id="scatterChart" height="220"></canvas>
+        </article>
+        <article class="chart-panel wide">
+          <div class="panel-heading">
+            <h2>Growth Comparison</h2>
+            <p>Revenue growth and profit growth from the prior annual period.</p>
+          </div>
+          <canvas id="growthChart" height="180"></canvas>
+        </article>
+      </section>
+
+      <section class="table-section" aria-label="Company table">
+        <div class="panel-heading">
+          <h2>Companies</h2>
+          <p>Click a row to inspect metrics, source tags, and SankeyArt references.</p>
+        </div>
+        <div class="table-wrap">
+          <table id="companyTable">
+            <thead>
+              <tr>
+                <th>Ticker</th>
+                <th>Company</th>
+                <th>Revenue</th>
+                <th>Profit</th>
+                <th>Net margin</th>
+                <th>Annual P/E</th>
+                <th>TTM P/E</th>
+                <th>FCF yield</th>
+              </tr>
+            </thead>
+            <tbody id="companyTableBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="glossary-section" id="metricGlossary" aria-label="Metric glossary">
+        <div class="panel-heading">
+          <h2>Metric Glossary</h2>
+          <p>Plain-language definitions for the quantities in the dashboard and income Sankey diagrams.</p>
+        </div>
+        <div id="glossaryGrid" class="glossary-grid"></div>
+      </section>
+    </main>
+
+    <aside id="detailDrawer" class="drawer" aria-label="Company detail drawer" aria-hidden="true">
+      <button id="closeDrawer" class="close-button" type="button" aria-label="Close detail drawer">Close</button>
+      <div class="drawer-hero">
+        <img id="companyLogo" alt="" src="" loading="lazy">
+        <div>
+          <p id="drawerTicker" class="eyebrow">Ticker</p>
+          <h2 id="drawerCompany">Select a company</h2>
+          <p id="drawerPeriod">Annual period unavailable</p>
+        </div>
+      </div>
+      <div id="drawerMetrics" class="metric-grid"></div>
+      <div class="drawer-block">
+        <h3>SankeyArt reference</h3>
+        <p id="sankeyStatus">Select a company to see whether a SankeyArt income statement diagram is available.</p>
+      </div>
+      <div class="drawer-block">
+        <h3>SEC tags used</h3>
+        <dl id="sourceTags"></dl>
+      </div>
+    </aside>
+    <div id="drawerBackdrop" class="drawer-backdrop" hidden></div>
+  </body>
+</html>
